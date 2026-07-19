@@ -91,6 +91,37 @@ export function readSettingsUpdate(message: unknown): UserSettings | null {
   return normalizeSettings(message.settings);
 }
 
+interface ContentMessageTarget {
+  applySettings(settings: UserSettings): void;
+  getVideoTimeMs(): number;
+}
+
+export class ContentMessageBridge {
+  private target: ContentMessageTarget | undefined;
+  private latestSettings: UserSettings | undefined;
+
+  handle(message: unknown): Promise<unknown> | undefined {
+    const nextSettings = readSettingsUpdate(message);
+    if (nextSettings) {
+      this.latestSettings = nextSettings;
+      this.target?.applySettings(nextSettings);
+      return Promise.resolve({ ok: true, mounted: Boolean(this.target) });
+    }
+    if (isRecord(message) && message.type === "GET_VIDEO_TIME") {
+      return Promise.resolve({ videoTimeMs: this.target?.getVideoTimeMs() ?? null });
+    }
+    return undefined;
+  }
+
+  attach(target: ContentMessageTarget): () => void {
+    this.target = target;
+    if (this.latestSettings) target.applySettings(this.latestSettings);
+    return () => {
+      if (this.target === target) this.target = undefined;
+    };
+  }
+}
+
 export function ensurePositionedContainer(
   container: HTMLElement,
   positionProvider: (element: HTMLElement) => string = (element) => getComputedStyle(element).position

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SETTINGS } from "@focapt/core/settings";
 import {
   AsyncGeneration,
+  ContentMessageBridge,
   ensurePositionedContainer,
   LatestRequestController,
   readSettingsUpdate,
@@ -15,6 +16,27 @@ import {
 afterEach(() => vi.useRealTimers());
 
 describe("YouTube content runtime helpers", () => {
+  it("video mount edilmeden gelen ayarlari kabul edip mount olunca uygular", async () => {
+    const bridge = new ContentMessageBridge();
+    const settings = { ...DEFAULT_SETTINGS, delayMs: 750 };
+
+    await expect(bridge.handle({ type: "SETTINGS_UPDATED", settings }))
+      .resolves.toEqual({ ok: true, mounted: false });
+
+    const applySettings = vi.fn();
+    const detach = bridge.attach({
+      applySettings,
+      getVideoTimeMs: () => 1250
+    });
+    expect(applySettings).toHaveBeenCalledWith(settings);
+    await expect(bridge.handle({ type: "GET_VIDEO_TIME" }))
+      .resolves.toEqual({ videoTimeMs: 1250 });
+
+    detach();
+    await expect(bridge.handle({ type: "GET_VIDEO_TIME" }))
+      .resolves.toEqual({ videoTimeMs: null });
+  });
+
   it("reentrant caption requestte önceki işi abort eder ve stale sonucu commit etmez", async () => {
     const requests = new LatestRequestController();
     const commits: string[] = [];

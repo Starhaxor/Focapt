@@ -11,9 +11,9 @@ import { mergeBilingualCues } from "../src/youtube/bilingual-cues";
 import { YouTubeCaptionSource } from "../src/youtube/caption-source";
 import {
   AsyncGeneration,
+  ContentMessageBridge,
   ensurePositionedContainer,
   LatestRequestController,
-  readSettingsUpdate,
   readTracksEventDetail,
   selectCaptionTrack,
   waitForYouTubeVideo
@@ -40,8 +40,11 @@ export default defineContentScript({
   async main(ctx) {
     const store = new SettingsStore(browser.storage.local);
     const generations = new AsyncGeneration();
+    const messages = new ContentMessageBridge();
+    const onMessage = (message: unknown): Promise<unknown> | undefined => messages.handle(message);
     let disposeMounted = (): void => undefined;
     let disposed = false;
+    browser.runtime.onMessage.addListener(onMessage);
 
     const mount = async (): Promise<void> => {
       disposeMounted();
@@ -183,9 +186,8 @@ export default defineContentScript({
         window.addEventListener(TRACKS_EVENT, onTracks);
         cleanups.push(() => window.removeEventListener(TRACKS_EVENT, onTracks));
 
-        const onMessage = (message: unknown): Promise<unknown> | undefined => {
-          const nextSettings = readSettingsUpdate(message);
-          if (nextSettings) {
+        const detachMessageTarget = messages.attach({
+          applySettings: (nextSettings) => {
             captionRequests.cancel();
             mountedSettings = nextSettings;
             translateKey = (key) => translator?.t(key, nextSettings.uiLocale) ?? fallbackMessage(key);
@@ -194,23 +196,12 @@ export default defineContentScript({
             timeline.replace([]);
             showStatus("translating");
             window.dispatchEvent(new CustomEvent(TRACKS_REQUEST_EVENT));
-            return Promise.resolve({ ok: true });
-          }
-          if (
-            typeof message === "object" &&
-            message !== null &&
-            "type" in message &&
-            message.type === "GET_VIDEO_TIME"
-          ) {
-            const videoTimeMs = Number.isFinite(video.currentTime)
+          },
+          getVideoTimeMs: () => Number.isFinite(video.currentTime)
               ? Math.max(0, Math.min(video.currentTime * 1000, Number.MAX_SAFE_INTEGER))
-              : 0;
-            return Promise.resolve({ videoTimeMs });
-          }
-          return undefined;
-        };
-        browser.runtime.onMessage.addListener(onMessage);
-        cleanups.push(() => browser.runtime.onMessage.removeListener(onMessage));
+              : 0
+        });
+        cleanups.push(detachMessageTarget);
 
         window.dispatchEvent(new CustomEvent(TRACKS_REQUEST_EVENT));
       } catch (error) {
@@ -229,6 +220,7 @@ export default defineContentScript({
       disposed = true;
       document.removeEventListener("yt-navigate-finish", onNavigate);
       window.removeEventListener("pagehide", dispose);
+      browser.runtime.onMessage.removeListener(onMessage);
       generations.dispose();
       disposeMounted();
       disposeMounted = () => undefined;
