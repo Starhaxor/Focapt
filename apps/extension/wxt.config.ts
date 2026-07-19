@@ -7,6 +7,6 @@ export default defineConfig({
     default_locale: "en",
     minimum_chrome_version: "116",
     permissions: ["storage", "activeTab", "tabCapture", "offscreen"],
-    host_permissions: ["https://www.youtube.com/*", "http://localhost:8787/*"]
+    host_permissions: ["https://www.youtube.com/*"]
   }
 });

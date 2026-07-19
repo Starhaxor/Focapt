@@ -5,9 +5,9 @@ import { browser } from "wxt/browser";
 import { createExtensionTranslator } from "../src/i18n/translator";
 import { PositionController } from "../src/overlay/position-controller";
 import { FocaptSubtitleOverlay } from "../src/overlay/subtitle-overlay";
-import { CaptionApi, resolveCaptionApiBaseUrl } from "../src/runtime/caption-api";
 import { SubtitleOrchestrator } from "../src/runtime/orchestrator";
 import { SettingsStore } from "../src/runtime/settings-store";
+import { mergeBilingualCues } from "../src/youtube/bilingual-cues";
 import { YouTubeCaptionSource } from "../src/youtube/caption-source";
 import {
   AsyncGeneration,
@@ -145,22 +145,16 @@ export default defineContentScript({
           try {
             await captionRequests.run(
               async (loadSignal, loadIsCurrent) => {
-                const source = await new YouTubeCaptionSource().load(track, loadSignal);
+                const captionSource = new YouTubeCaptionSource();
+                const sourcePromise = captionSource.load(track, loadSignal);
+                const translatedPromise = requestSettings.sourceLanguage === requestSettings.targetLanguage
+                  ? sourcePromise
+                  : captionSource.loadTranslated(track, requestSettings.targetLanguage, loadSignal);
+                const [source, translated] = await Promise.all([sourcePromise, translatedPromise]);
                 if (!loadIsCurrent() || !generation.isCurrent() || requestVideoId !== currentVideoId()) {
                   return null;
                 }
-                const translated = await new CaptionApi(
-                  resolveCaptionApiBaseUrl(import.meta.env.WXT_CAPTION_API_URL),
-                ).translate(
-                  source,
-                  requestSettings.sourceLanguage,
-                  requestSettings.targetLanguage,
-                  loadSignal
-                );
-                if (!loadIsCurrent() || !generation.isCurrent() || requestVideoId !== currentVideoId()) {
-                  return null;
-                }
-                return translated;
+                return mergeBilingualCues(source, translated);
               },
               (translated) => {
                 if (

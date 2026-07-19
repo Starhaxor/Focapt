@@ -1,4 +1,4 @@
-import type { CaptionCue } from "@focapt/contracts/captions";
+import type { CaptionCue, LanguageCode } from "@focapt/contracts/captions";
 
 import { parseJson3 } from "./json3";
 import type { YouTubeCaptionTrack } from "./player-response";
@@ -32,7 +32,7 @@ const isJson3Payload = (
 const isYouTubeHostname = (hostname: string): boolean =>
   hostname === "youtube.com" || hostname.endsWith(".youtube.com");
 
-const createJson3Url = (baseUrl: string): URL => {
+const createJson3Url = (baseUrl: string, targetLanguage?: LanguageCode): URL => {
   let url: URL;
   try {
     url = new URL(baseUrl);
@@ -49,6 +49,8 @@ const createJson3Url = (baseUrl: string): URL => {
   }
 
   url.searchParams.set("fmt", "json3");
+  if (targetLanguage) url.searchParams.set("tlang", targetLanguage);
+  else url.searchParams.delete("tlang");
   return url;
 };
 
@@ -59,7 +61,18 @@ export class YouTubeCaptionSource {
     track: YouTubeCaptionTrack,
     signal?: AbortSignal,
   ): Promise<CaptionCue[]> {
-    const url = createJson3Url(track.baseUrl);
+    return this.loadUrl(createJson3Url(track.baseUrl), signal);
+  }
+
+  async loadTranslated(
+    track: YouTubeCaptionTrack,
+    targetLanguage: LanguageCode,
+    signal?: AbortSignal,
+  ): Promise<CaptionCue[]> {
+    return this.loadUrl(createJson3Url(track.baseUrl, targetLanguage), signal);
+  }
+
+  private async loadUrl(url: URL, signal?: AbortSignal): Promise<CaptionCue[]> {
     const response = await this.fetcher(url, signal ? { signal } : undefined);
 
     if (!response.ok) {

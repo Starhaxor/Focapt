@@ -38,10 +38,25 @@ describe("YouTubeCaptionSource", () => {
     expect(requestedUrl.searchParams.get("v")).toBe("1");
     expect(requestedUrl.searchParams.get("lang")).toBe("en");
     expect(requestedUrl.searchParams.get("fmt")).toBe("json3");
+    expect(requestedUrl.searchParams.get("tlang")).toBeNull();
     expect(init).toMatchObject({ signal: controller.signal });
     expect(cues).toEqual([
       { id: "yt-0-1000", startMs: 0, endMs: 1000, text: "Hello" },
     ]);
+  });
+
+  it("aynı track'i hedef dil ve json3 parametreleriyle yükler", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify(json3Payload), { status: 200 }),
+    );
+
+    await new YouTubeCaptionSource(fetcher).loadTranslated(track, "tr");
+
+    const requestedUrl = new URL(String(fetcher.mock.calls[0]![0]));
+    expect(requestedUrl.searchParams.get("v")).toBe("1");
+    expect(requestedUrl.searchParams.get("lang")).toBe("en");
+    expect(requestedUrl.searchParams.get("fmt")).toBe("json3");
+    expect(requestedUrl.searchParams.get("tlang")).toBe("tr");
   });
 
   it.each([

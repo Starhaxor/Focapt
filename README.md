@@ -14,26 +14,12 @@ YouTube için çift dilli, özelleştirilebilir altyazı eklentisi.
 
 ```powershell
 npm install
-Copy-Item apps/api/.env.example apps/api/.env
-```
-
-`apps/api/.env` içindeki `HF_TOKEN` alanına Hugging Face access token yazın.
-
-Çeviri API'sini başlatın:
-
-```powershell
-npm -w @focapt/api run dev
-```
-
-Eklentiyi derleyin:
-
-```powershell
 npm -w @focapt/extension run build
 ```
 
 Chrome'da `chrome://extensions` sayfasını açın, **Geliştirici modu**nu etkinleştirin, **Paketlenmemiş öğe yükle** seçeneğiyle `apps/extension/.output/chrome-mv3` klasörünü seçin.
 
-YouTube videosunu açın ve Focapt popup'ından dilleri, konum modunu ve görünümü ayarlayın. Video için mevcut YouTube altyazısı bulunmalıdır.
+YouTube videosunu açın ve Focapt popup'ından dilleri, konum modunu ve görünümü ayarlayın. Video için mevcut YouTube altyazısı bulunmalıdır. İkinci satır YouTube'un kendi `tlang` çeviri altyazısından üretilir; token veya ayrı sunucu gerekmez.
 
 ## Geliştirme doğrulaması
 
