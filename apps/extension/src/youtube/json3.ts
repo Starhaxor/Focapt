@@ -31,7 +31,11 @@ export function parseJson3(payload: unknown): CaptionCue[] {
     if (!isRecord(event)) return [];
 
     const { tStartMs, dDurationMs } = event;
-    if (!isValidTime(tStartMs) || !isValidTime(dDurationMs)) return [];
+    if (
+      !isValidTime(tStartMs) ||
+      !isValidTime(dDurationMs) ||
+      dDurationMs === 0
+    ) return [];
 
     const endMs = tStartMs + dDurationMs;
     if (!Number.isSafeInteger(endMs)) return [];

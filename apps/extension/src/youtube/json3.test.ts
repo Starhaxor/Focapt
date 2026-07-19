@@ -36,6 +36,7 @@ describe("parseJson3", () => {
   it.each([
     { tStartMs: -1, dDurationMs: 100, segs: [{ utf8: "negative start" }] },
     { tStartMs: 1, dDurationMs: -1, segs: [{ utf8: "negative duration" }] },
+    { tStartMs: 1, dDurationMs: 0, segs: [{ utf8: "zero duration" }] },
     { tStartMs: 0.5, dDurationMs: 100, segs: [{ utf8: "fractional start" }] },
     { tStartMs: 1, dDurationMs: 0.5, segs: [{ utf8: "fractional duration" }] },
     { tStartMs: Number.NaN, dDurationMs: 100, segs: [{ utf8: "nan" }] },
