@@ -1,0 +1,1 @@
+{"name":"@focapt/contracts","version":"0.0.0","private":true,"type":"module","exports":{"./captions":"./src/captions.ts","./settings":"./src/settings.ts"},"scripts":{"typecheck":"tsc --noEmit"}}

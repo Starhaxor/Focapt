@@ -1,0 +1,20 @@
+{
+  "name": "focapt",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "prepare": "npm -w @focapt/extension run prepare",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "happy-dom": "20.11.0",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  }
+}
