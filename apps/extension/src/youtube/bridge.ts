@@ -2,6 +2,7 @@ interface InstallYouTubeTracksBridgeOptions {
   host: object;
   publish: () => void;
   addNavigationListener: (listener: () => void) => void;
+  addRequestListener?: (listener: () => void) => void;
 }
 
 const publishersByHost = new WeakMap<object, () => void>();
@@ -18,6 +19,7 @@ export function installYouTubeTracksBridge({
   host,
   publish,
   addNavigationListener,
+  addRequestListener,
 }: InstallYouTubeTracksBridgeOptions): void {
   const existingPublish = publishersByHost.get(host);
   if (existingPublish !== undefined) {
@@ -31,6 +33,12 @@ export function installYouTubeTracksBridge({
   } catch {
     safePublish();
     return;
+  }
+
+  try {
+    addRequestListener?.(safePublish);
+  } catch {
+    // Navigation publication still works if the request channel is unavailable.
   }
 
   publishersByHost.set(host, safePublish);

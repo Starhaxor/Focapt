@@ -1,10 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { installYouTubeTracksBridge } from "./bridge";
 
 const legacyBridgeStateKey = "__focaptYouTubeTracksBridge__";
 
 describe("installYouTubeTracksBridge", () => {
+  it("isolated listener hazır olduktan sonra gelen request eventinde tekrar yayınlar", () => {
+    const host = {};
+    let requestListener: (() => void) | undefined;
+    const publish = vi.fn();
+
+    installYouTubeTracksBridge({
+      host,
+      publish,
+      addNavigationListener: () => undefined,
+      addRequestListener: (listener) => {
+        requestListener = listener;
+      }
+    });
+    expect(publish).toHaveBeenCalledOnce();
+    requestListener?.();
+    expect(publish).toHaveBeenCalledTimes(2);
+  });
+
   it("module-private registry ile normal yeniden kurulumda listener'ı çoğaltmaz", () => {
     const host = {};
     const listeners: Array<() => void> = [];

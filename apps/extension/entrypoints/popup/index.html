@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="appName"></title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header class="masthead">
+        <span class="mark" aria-hidden="true" data-i18n="appMark"></span>
+        <div>
+          <h1 data-i18n="appName"></h1>
+          <p data-i18n="appDescription"></p>
+        </div>
+      </header>
+
+      <form id="settings" novalidate inert aria-busy="true" data-ready="false">
+        <fieldset disabled>
+          <legend data-i18n="languageSettings"></legend>
+          <div class="grid two">
+            <label>
+              <span data-i18n="sourceLanguage"></span>
+              <select name="sourceLanguage">
+                <option value="en" data-i18n="languageEnglish"></option>
+                <option value="tr" data-i18n="languageTurkish"></option>
+                <option value="de" data-i18n="languageGerman"></option>
+                <option value="es" data-i18n="languageSpanish"></option>
+                <option value="fr" data-i18n="languageFrench"></option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="targetLanguage"></span>
+              <select name="targetLanguage">
+                <option value="tr" data-i18n="languageTurkish"></option>
+                <option value="en" data-i18n="languageEnglish"></option>
+                <option value="de" data-i18n="languageGerman"></option>
+                <option value="es" data-i18n="languageSpanish"></option>
+                <option value="fr" data-i18n="languageFrench"></option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset disabled>
+          <legend data-i18n="positioning"></legend>
+          <label>
+            <span data-i18n="positionMode"></span>
+            <select name="positionMode">
+              <option value="fixed" data-i18n="fixed"></option>
+              <option value="moving" data-i18n="moving"></option>
+              <option value="delayed" data-i18n="delayed"></option>
+            </select>
+          </label>
+          <div class="grid two compact-row">
+            <label>
+              <span data-i18n="fixedX"></span>
+              <span class="with-unit"><input name="fixedX" type="number" min="0" max="100" step="1" /><span data-i18n="unitPercent"></span></span>
+            </label>
+            <label>
+              <span data-i18n="fixedY"></span>
+              <span class="with-unit"><input name="fixedY" type="number" min="0" max="100" step="1" /><span data-i18n="unitPercent"></span></span>
+            </label>
+            <label>
+              <span data-i18n="delay"></span>
+              <span class="with-unit"><input name="delayMs" type="number" min="0" max="3000" step="50" /><span data-i18n="unitMilliseconds"></span></span>
+            </label>
+            <label>
+              <span data-i18n="pointerOffset"></span>
+              <span class="with-unit"><input name="pointerOffsetPx" type="number" min="4" max="80" /><span data-i18n="unitPixels"></span></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="style-grid">
+          <fieldset disabled>
+            <legend data-i18n="sourceStyle"></legend>
+            <label class="color-field"><span data-i18n="color"></span><input name="sourceColor" type="color" /></label>
+            <div class="grid two compact-row">
+              <label><span data-i18n="fontSize"></span><span class="with-unit"><input name="sourceSize" type="number" min="12" max="48" /><span data-i18n="unitPixels"></span></span></label>
+              <label><span data-i18n="fontWeight"></span><select name="sourceWeight"><option value="400" data-i18n="weight400"></option><option value="500" data-i18n="weight500"></option><option value="600" data-i18n="weight600"></option><option value="700" data-i18n="weight700"></option></select></label>
+            </div>
+          </fieldset>
+          <fieldset disabled>
+            <legend data-i18n="translationStyle"></legend>
+            <label class="color-field"><span data-i18n="color"></span><input name="translationColor" type="color" /></label>
+            <div class="grid two compact-row">
+              <label><span data-i18n="fontSize"></span><span class="with-unit"><input name="translationSize" type="number" min="12" max="48" /><span data-i18n="unitPixels"></span></span></label>
+              <label><span data-i18n="fontWeight"></span><select name="translationWeight"><option value="400" data-i18n="weight400"></option><option value="500" data-i18n="weight500"></option><option value="600" data-i18n="weight600"></option><option value="700" data-i18n="weight700"></option></select></label>
+            </div>
+          </fieldset>
+        </div>
+
+        <fieldset disabled>
+          <legend data-i18n="boxStyle"></legend>
+          <div class="grid three compact-row">
+            <label class="color-field"><span data-i18n="boxColor"></span><input name="boxColor" type="color" /></label>
+            <label class="range-field"><span data-i18n="opacity"></span><input name="boxOpacity" type="range" min="0.2" max="1" step="0.05" /></label>
+            <label><span data-i18n="padding"></span><span class="with-unit"><input name="paddingPx" type="number" min="4" max="32" /><span data-i18n="unitPixels"></span></span></label>
+            <label><span data-i18n="radius"></span><span class="with-unit"><input name="radiusPx" type="number" min="0" max="32" /><span data-i18n="unitPixels"></span></span></label>
+            <label><span data-i18n="lineGap"></span><span class="with-unit"><input name="lineGapPx" type="number" min="0" max="24" /><span data-i18n="unitPixels"></span></span></label>
+          </div>
+        </fieldset>
+
+        <fieldset disabled>
+          <legend data-i18n="preferences"></legend>
+          <div class="grid two">
+            <label><span data-i18n="scope"></span><select name="scope"><option value="global" data-i18n="global"></option><option value="site" data-i18n="site"></option></select></label>
+            <label><span data-i18n="uiLanguage"></span><select name="uiLocale"><option value="auto" data-i18n="auto"></option><option value="tr" data-i18n="turkish"></option><option value="en" data-i18n="english"></option></select></label>
+          </div>
+        </fieldset>
+
+        <output id="status" role="status" aria-live="polite" data-i18n="loading"></output>
+        <div class="actions">
+          <button type="reset" class="secondary" data-i18n="reset"></button>
+          <button type="button" id="start-ai" class="primary" data-i18n="startAi" disabled></button>
+        </div>
+      </form>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

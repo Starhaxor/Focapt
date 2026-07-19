@@ -130,6 +130,19 @@ export class FocaptSubtitleOverlay extends HTMLElement {
     this.syncVisibility();
   }
 
+  getContentSize(): { width: number; height: number } {
+    const rect = this.box.getBoundingClientRect();
+    return { width: finiteOrZero(rect.width), height: finiteOrZero(rect.height) };
+  }
+
+  setBounds(bounds: { left: number; top: number; width: number; height: number }): void {
+    this.style.inset = "auto";
+    this.style.left = `${finiteOrZero(bounds.left)}px`;
+    this.style.top = `${finiteOrZero(bounds.top)}px`;
+    this.style.width = `${Math.max(0, finiteOrZero(bounds.width))}px`;
+    this.style.height = `${Math.max(0, finiteOrZero(bounds.height))}px`;
+  }
+
   applySettings(value: UserSettings): void {
     const style = this.style;
     style.setProperty("--source-color", value.sourceStyle.color);

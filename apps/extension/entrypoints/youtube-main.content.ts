@@ -1,5 +1,6 @@
 import { installYouTubeTracksBridge } from "../src/youtube/bridge";
 import { extractCaptionTracks } from "../src/youtube/player-response";
+import { isYouTubeVideoId, readYouTubeVideoId } from "../src/youtube/youtube-url";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -45,11 +46,11 @@ export default defineContentScript({
 
         const videoData = callSafely(player?.getVideoData?.bind(player));
         const playerVideoId =
-          isRecord(videoData) && typeof videoData.video_id === "string"
+          isRecord(videoData) && isYouTubeVideoId(videoData.video_id)
             ? videoData.video_id
             : "";
         const videoId =
-          playerVideoId || new URL(location.href).searchParams.get("v") || "";
+          playerVideoId || readYouTubeVideoId(location.href) || "";
 
         window.dispatchEvent(
           new CustomEvent("focapt:youtube-tracks", {
@@ -66,6 +67,8 @@ export default defineContentScript({
       publish,
       addNavigationListener: (listener) =>
         document.addEventListener("yt-navigate-finish", listener),
+      addRequestListener: (listener) =>
+        window.addEventListener("focapt:request-youtube-tracks", listener),
     });
   },
 });
