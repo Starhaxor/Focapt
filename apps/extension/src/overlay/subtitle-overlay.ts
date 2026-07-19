@@ -12,7 +12,8 @@ function finiteOrZero(value: number): number {
  * Render inside a positioned parent whose top-left matches PositionController's video-local origin.
  * The host covers that parent and intentionally does not alter parent/video positioning styles.
  */
-export class FocaptSubtitleOverlay extends HTMLElement {
+export class FocaptSubtitleOverlay {
+  readonly host: HTMLElement;
   private readonly box: HTMLElement;
   private readonly source: HTMLElement;
   private readonly translation: HTMLElement;
@@ -23,8 +24,8 @@ export class FocaptSubtitleOverlay extends HTMLElement {
   private destroyed = false;
 
   constructor() {
-    super();
-    const root = this.attachShadow({ mode: "open" });
+    this.host = document.createElement(TAG_NAME);
+    const root = this.host.attachShadow({ mode: "open" });
     root.innerHTML = `<style>
       :host {
         position: absolute;
@@ -99,6 +100,22 @@ export class FocaptSubtitleOverlay extends HTMLElement {
     this.syncVisibility();
   }
 
+  get shadowRoot(): ShadowRoot | null {
+    return this.host.shadowRoot;
+  }
+
+  get style(): CSSStyleDeclaration {
+    return this.host.style;
+  }
+
+  get isConnected(): boolean {
+    return this.host.isConnected;
+  }
+
+  getAttribute(name: string): string | null {
+    return this.host.getAttribute(name);
+  }
+
   setCue(cue: BilingualCue | null): void {
     this.box.removeAttribute("role");
     this.box.removeAttribute("aria-live");
@@ -136,15 +153,15 @@ export class FocaptSubtitleOverlay extends HTMLElement {
   }
 
   setBounds(bounds: { left: number; top: number; width: number; height: number }): void {
-    this.style.inset = "auto";
-    this.style.left = `${finiteOrZero(bounds.left)}px`;
-    this.style.top = `${finiteOrZero(bounds.top)}px`;
-    this.style.width = `${Math.max(0, finiteOrZero(bounds.width))}px`;
-    this.style.height = `${Math.max(0, finiteOrZero(bounds.height))}px`;
+    this.host.style.inset = "auto";
+    this.host.style.left = `${finiteOrZero(bounds.left)}px`;
+    this.host.style.top = `${finiteOrZero(bounds.top)}px`;
+    this.host.style.width = `${Math.max(0, finiteOrZero(bounds.width))}px`;
+    this.host.style.height = `${Math.max(0, finiteOrZero(bounds.height))}px`;
   }
 
   applySettings(value: UserSettings): void {
-    const style = this.style;
+    const style = this.host.style;
     style.setProperty("--source-color", value.sourceStyle.color);
     style.setProperty("--source-size", `${value.sourceStyle.fontSizePx}px`);
     style.setProperty("--source-weight", String(value.sourceStyle.fontWeight));
@@ -157,7 +174,7 @@ export class FocaptSubtitleOverlay extends HTMLElement {
     style.setProperty("--box-padding", `${value.box.paddingPx}px`);
     style.setProperty("--box-radius", `${value.box.radiusPx}px`);
     style.setProperty("--line-gap", `${value.box.lineGapPx}px`);
-    this.dataset.mode = value.positionMode;
+    this.host.dataset.mode = value.positionMode;
     this.scheduleLayoutNotification();
   }
 
@@ -167,7 +184,7 @@ export class FocaptSubtitleOverlay extends HTMLElement {
     this.layoutRevision += 1;
     this.cancelLayoutNotification?.();
     this.cancelLayoutNotification = undefined;
-    this.remove();
+    this.host.remove();
   }
 
   private scheduleLayoutNotification(): void {
@@ -176,7 +193,7 @@ export class FocaptSubtitleOverlay extends HTMLElement {
     const notify = (): void => {
       this.cancelLayoutNotification = undefined;
       if (this.destroyed || revision !== this.layoutRevision) return;
-      this.dispatchEvent(
+      this.host.dispatchEvent(
         new CustomEvent(OVERLAY_LAYOUT_EVENT, { bubbles: true, composed: true })
       );
     };
@@ -204,13 +221,9 @@ export class FocaptSubtitleOverlay extends HTMLElement {
   private syncVisibility(): void {
     this.box.hidden = !this.hasContent;
     this.box.style.visibility = this.positionVisible ? "visible" : "hidden";
-    this.style.visibility = this.positionVisible ? "visible" : "hidden";
+    this.host.style.visibility = this.positionVisible ? "visible" : "hidden";
     const ariaHidden = String(!this.hasContent || !this.positionVisible);
     this.box.setAttribute("aria-hidden", ariaHidden);
-    this.setAttribute("aria-hidden", ariaHidden);
+    this.host.setAttribute("aria-hidden", ariaHidden);
   }
-}
-
-if (typeof customElements !== "undefined" && !customElements.get(TAG_NAME)) {
-  customElements.define(TAG_NAME, FocaptSubtitleOverlay);
 }

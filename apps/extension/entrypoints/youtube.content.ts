@@ -85,7 +85,7 @@ export default defineContentScript({
         overlay = new FocaptSubtitleOverlay();
         overlay.applySettings(mountedSettings);
         showStatus("loading");
-        container.append(overlay);
+        container.append(overlay.host);
         cleanups.push(() => overlay?.destroy());
 
         try {

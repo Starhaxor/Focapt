@@ -43,6 +43,20 @@ describe("FocaptSubtitleOverlay", () => {
     vi.unstubAllGlobals();
   });
 
+  it("Chrome isolated world customElements null olsa da normal DOM hostu olusturur", async () => {
+    vi.resetModules();
+    vi.stubGlobal("customElements", null);
+
+    const { FocaptSubtitleOverlay: IsolatedOverlay } = await import("./subtitle-overlay");
+    const overlay = new IsolatedOverlay() as unknown as {
+      host: HTMLElement;
+      shadowRoot: ShadowRoot | null;
+    };
+
+    expect(overlay.host).toBeInstanceOf(HTMLElement);
+    expect(overlay.shadowRoot?.querySelector("[data-box]")).not.toBeNull();
+  });
+
   it("iki dili source ardından translation sırasıyla ve bağımsız CSS değişkenleriyle gösterir", () => {
     const element = new FocaptSubtitleOverlay();
     element.applySettings({
@@ -106,7 +120,7 @@ describe("FocaptSubtitleOverlay", () => {
     const parent = document.createElement("div");
     parent.style.position = "relative";
     const element = new FocaptSubtitleOverlay();
-    parent.append(element);
+    parent.append(element.host);
     const css = element.shadowRoot?.querySelector("style")?.textContent ?? "";
 
     expect(css).toMatch(/:host\s*\{[^}]*position:\s*absolute;/s);
@@ -209,7 +223,7 @@ describe("FocaptSubtitleOverlay", () => {
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
     const parent = document.createElement("div");
     const element = new FocaptSubtitleOverlay();
-    parent.append(element);
+    parent.append(element.host);
     const events: Event[] = [];
     parent.addEventListener(OVERLAY_LAYOUT_EVENT, (event) => events.push(event));
 
@@ -229,7 +243,7 @@ describe("FocaptSubtitleOverlay", () => {
     vi.stubGlobal("cancelAnimationFrame", undefined);
     const element = new FocaptSubtitleOverlay();
     const listener = vi.fn();
-    element.addEventListener(OVERLAY_LAYOUT_EVENT, listener);
+    element.host.addEventListener(OVERLAY_LAYOUT_EVENT, listener);
 
     element.setStatus("Hazırlanıyor");
     expect(listener).not.toHaveBeenCalled();
@@ -247,7 +261,7 @@ describe("FocaptSubtitleOverlay", () => {
     vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame);
     const element = new FocaptSubtitleOverlay();
     const listener = vi.fn();
-    element.addEventListener(OVERLAY_LAYOUT_EVENT, listener);
+    element.host.addEventListener(OVERLAY_LAYOUT_EVENT, listener);
     element.setCue({ id: "1", startMs: 0, endMs: 1, text: "A", translatedText: "B" });
 
     element.destroy();
@@ -260,13 +274,13 @@ describe("FocaptSubtitleOverlay", () => {
 
   it("konumu sonlu değerlere indirger, destroy çağrısını idempotent tutar ve kayıt guard'ını korur", () => {
     const element = new FocaptSubtitleOverlay();
-    document.body.append(element);
+    document.body.append(element.host);
     element.setPosition(Number.NaN, Number.POSITIVE_INFINITY);
     expect(element.shadowRoot?.querySelector<HTMLElement>("[data-box]")?.style.transform).toBe(
       "translate(0px, 0px)"
     );
 
-    expect(customElements.get("focapt-subtitle-overlay")).toBe(FocaptSubtitleOverlay);
+    expect(element.host.localName).toBe("focapt-subtitle-overlay");
     element.destroy();
     element.destroy();
     expect(element.isConnected).toBe(false);
