@@ -1,1 +1,1 @@
-{"name":"@focapt/extension","version":"0.0.0","private":true,"type":"module","scripts":{"dev":"wxt","prepare":"wxt prepare","build":"wxt build","typecheck":"tsc --noEmit"},"dependencies":{"@focapt/contracts":"*"},"devDependencies":{"wxt":"0.20.27"}}
+{"name":"@focapt/extension","version":"0.0.0","private":true,"type":"module","scripts":{"dev":"wxt","prepare":"wxt prepare","build":"wxt build","typecheck":"tsc --noEmit"},"dependencies":{"@focapt/contracts":"*","@focapt/core":"*"},"devDependencies":{"wxt":"0.20.27"}}

@@ -1,0 +1,1 @@
+{"name":"@focapt/core","version":"0.0.0","private":true,"type":"module","exports":{"./settings":"./src/settings.ts","./timeline":"./src/timeline.ts"},"dependencies":{"@focapt/contracts":"*"},"scripts":{"typecheck":"tsc --noEmit"}}
