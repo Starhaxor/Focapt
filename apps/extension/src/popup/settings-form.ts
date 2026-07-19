@@ -83,7 +83,7 @@ export function normalizeSettingsForm(form: HTMLFormElement): UserSettings {
 
 export function setPopupReady(
   form: HTMLFormElement,
-  startButton: HTMLButtonElement,
+  startButton: HTMLButtonElement | null,
   ready: boolean
 ): void {
   form.dataset.ready = String(ready);
@@ -92,7 +92,7 @@ export function setPopupReady(
   for (const fieldset of form.querySelectorAll<HTMLFieldSetElement>("fieldset")) {
     fieldset.disabled = !ready;
   }
-  startButton.disabled = !ready;
+  if (startButton) startButton.disabled = !ready;
 }
 
 export function guardWhenReady(

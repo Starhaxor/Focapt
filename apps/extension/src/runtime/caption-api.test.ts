@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CaptionApi, CaptionApiError } from "./caption-api";
+import {
+  CaptionApi,
+  CaptionApiError,
+  resolveCaptionApiBaseUrl,
+} from "./caption-api";
 
 const sourceCue = { id: "c1", startMs: 0, endMs: 1000, text: "Hello" };
 const translatedCue = { ...sourceCue, translatedText: "Merhaba" };
 
 describe("CaptionApi", () => {
+  it("uses the local API when the build-time URL is absent", () => {
+    expect(resolveCaptionApiBaseUrl(undefined)).toBe("http://localhost:8787");
+    expect(resolveCaptionApiBaseUrl("")).toBe("http://localhost:8787");
+    expect(resolveCaptionApiBaseUrl("https://captions.example")).toBe(
+      "https://captions.example",
+    );
+  });
+
   it("çeviri isteğini güvenli URL, JSON header ve beklenen body ile gönderir", async () => {
     const fetcher = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify({ cues: [translatedCue] }), {

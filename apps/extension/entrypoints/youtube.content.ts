@@ -5,7 +5,7 @@ import { browser } from "wxt/browser";
 import { createExtensionTranslator } from "../src/i18n/translator";
 import { PositionController } from "../src/overlay/position-controller";
 import { FocaptSubtitleOverlay } from "../src/overlay/subtitle-overlay";
-import { CaptionApi } from "../src/runtime/caption-api";
+import { CaptionApi, resolveCaptionApiBaseUrl } from "../src/runtime/caption-api";
 import { SubtitleOrchestrator } from "../src/runtime/orchestrator";
 import { SettingsStore } from "../src/runtime/settings-store";
 import { YouTubeCaptionSource } from "../src/youtube/caption-source";
@@ -149,7 +149,9 @@ export default defineContentScript({
                 if (!loadIsCurrent() || !generation.isCurrent() || requestVideoId !== currentVideoId()) {
                   return null;
                 }
-                const translated = await new CaptionApi(import.meta.env.WXT_CAPTION_API_URL).translate(
+                const translated = await new CaptionApi(
+                  resolveCaptionApiBaseUrl(import.meta.env.WXT_CAPTION_API_URL),
+                ).translate(
                   source,
                   requestSettings.sourceLanguage,
                   requestSettings.targetLanguage,

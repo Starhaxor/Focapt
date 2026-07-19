@@ -3,14 +3,12 @@ import { DEFAULT_SETTINGS } from "@focapt/core/settings";
 import { browser } from "wxt/browser";
 import { createExtensionTranslator, type Translator } from "../../src/i18n/translator";
 import {
-  createStartAiCaptureMessage,
   DebouncedSerialWriter,
   guardWhenReady,
   isYouTubeVideoUrl,
   normalizeSettingsForm,
   populateSettingsForm,
   readSettingsForm,
-  readVideoTimeResponse,
   setPopupReady
 } from "../../src/popup/settings-form";
 import { SettingsStore } from "../../src/runtime/settings-store";
@@ -18,7 +16,7 @@ import { SettingsStore } from "../../src/runtime/settings-store";
 const SITE = "youtube.com";
 const form = document.querySelector<HTMLFormElement>("#settings")!;
 const status = document.querySelector<HTMLOutputElement>("#status")!;
-const startAiButton = document.querySelector<HTMLButtonElement>("#start-ai")!;
+const startAiButton = document.querySelector<HTMLButtonElement>("#start-ai");
 const store = new SettingsStore(browser.storage.local);
 setPopupReady(form, startAiButton, false);
 
@@ -102,43 +100,6 @@ form.addEventListener("reset", guardWhenReady(form, (event) => {
   setStatus("saving");
   writer.schedule(DEFAULT_SETTINGS);
   void writer.flush();
-}));
-
-startAiButton.addEventListener("click", guardWhenReady(form, () => {
-  void (async () => {
-    startAiButton.disabled = true;
-    try {
-      await writer.flush();
-      const tab = await activeTab();
-      if (!tab || !isYouTubeVideoUrl(tab.url)) {
-        setStatus("notYouTubeVideo", "error");
-        return;
-      }
-
-      let videoTimeMs: number | null = null;
-      try {
-        videoTimeMs = readVideoTimeResponse(
-          await browser.tabs.sendMessage(tab.id, { type: "GET_VIDEO_TIME" })
-        );
-      } catch {
-        setStatus("messagingUnavailable", "error");
-        return;
-      }
-      if (videoTimeMs === null) {
-        setStatus("messagingUnavailable", "error");
-        return;
-      }
-
-      await browser.runtime.sendMessage(
-        createStartAiCaptureMessage(readSettingsForm(form), tab.id, videoTimeMs)
-      );
-      setStatus("captureRequested");
-    } catch {
-      setStatus("captureFailed", "error");
-    } finally {
-      startAiButton.disabled = false;
-    }
-  })();
 }));
 
 void (async () => {

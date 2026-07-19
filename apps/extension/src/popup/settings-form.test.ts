@@ -54,6 +54,14 @@ describe("popup settings form", () => {
     expect(startButton.disabled).toBe(false);
   });
 
+  it("AI button is optional for the MVP popup", () => {
+    const form = createForm();
+    form.querySelector("#start-ai")?.remove();
+
+    expect(() => setPopupReady(form, null, true)).not.toThrow();
+    expect(form.dataset.ready).toBe("true");
+  });
+
   it("kayıtlı ayarların bütün alanlarını populate edip kayıpsız okur", () => {
     const form = createForm();
     const settings = {

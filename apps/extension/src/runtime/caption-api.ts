@@ -69,6 +69,9 @@ const createTranslateUrl = (baseUrl: string): string => {
   return new URL("/v1/translate", url.origin).toString();
 };
 
+export const resolveCaptionApiBaseUrl = (configuredUrl: string | undefined): string =>
+  configuredUrl || "http://localhost:8787";
+
 export class CaptionApi {
   constructor(
     private readonly baseUrl: string,
