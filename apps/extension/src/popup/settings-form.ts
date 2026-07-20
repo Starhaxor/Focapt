@@ -15,7 +15,17 @@ const setValue = (form: HTMLFormElement, name: string, value: string | number): 
   control(form, name).value = String(value);
 };
 
+const setChecked = (form: HTMLFormElement, name: string, checked: boolean): void => {
+  const item = control(form, name);
+  if (!(item instanceof HTMLInputElement) || item.type !== "checkbox") {
+    throw new Error(`INVALID_SETTINGS_CHECKBOX:${name}`);
+  }
+  item.checked = checked;
+};
+
 export function populateSettingsForm(form: HTMLFormElement, settings: UserSettings): void {
+  setChecked(form, "enabled", settings.enabled);
+  setValue(form, "theme", settings.theme);
   setValue(form, "sourceLanguage", settings.sourceLanguage);
   setValue(form, "targetLanguage", settings.targetLanguage);
   setValue(form, "positionMode", settings.positionMode);
@@ -40,10 +50,19 @@ export function populateSettingsForm(form: HTMLFormElement, settings: UserSettin
 
 const value = (form: HTMLFormElement, name: string): string => control(form, name).value;
 const numberValue = (form: HTMLFormElement, name: string): number => Number(value(form, name));
+const checked = (form: HTMLFormElement, name: string): boolean => {
+  const item = control(form, name);
+  if (!(item instanceof HTMLInputElement) || item.type !== "checkbox") {
+    throw new Error(`INVALID_SETTINGS_CHECKBOX:${name}`);
+  }
+  return item.checked;
+};
 
 export function readSettingsForm(form: HTMLFormElement): UserSettings {
   return normalizeSettings({
     ...DEFAULT_SETTINGS,
+    enabled: checked(form, "enabled"),
+    theme: value(form, "theme"),
     sourceLanguage: value(form, "sourceLanguage"),
     targetLanguage: value(form, "targetLanguage"),
     positionMode: value(form, "positionMode"),

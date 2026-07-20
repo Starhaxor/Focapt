@@ -1,4 +1,9 @@
-export type LanguageCode = "en" | "tr" | "de" | "es" | "fr";
+export type LanguageCode = string;
+
+export interface LanguageOption {
+  languageCode: LanguageCode;
+  label: string;
+}
 
 export interface CaptionCue {
   id: string;

@@ -16,6 +16,7 @@ import {
 
 function createForm(): HTMLFormElement {
   document.body.innerHTML = `<form><fieldset>
+    <input name="enabled" type="checkbox"><input name="theme">
     <input name="sourceLanguage"><input name="targetLanguage"><input name="positionMode">
     <input name="delayMs" type="number"><input name="pointerOffsetPx" type="number">
     <input name="fixedX" type="number"><input name="fixedY" type="number">
@@ -66,6 +67,8 @@ describe("popup settings form", () => {
     const form = createForm();
     const settings = {
       ...DEFAULT_SETTINGS,
+      enabled: false,
+      theme: "dark" as const,
       positionMode: "delayed" as const,
       delayMs: 1200,
       pointerOffsetPx: 32,
@@ -81,6 +84,8 @@ describe("popup settings form", () => {
     expect(readSettingsForm(form)).toEqual(settings);
     expect((form.elements.namedItem("fixedX") as HTMLInputElement).value).toBe("24");
     expect((form.elements.namedItem("fixedY") as HTMLInputElement).value).toBe("76");
+    expect((form.elements.namedItem("enabled") as HTMLInputElement).checked).toBe(false);
+    expect((form.elements.namedItem("theme") as HTMLInputElement).value).toBe("dark");
   });
 
   it("debounce edilen kayıtları aynı anda çalıştırmadan en son değerle serileştirir", async () => {
@@ -147,7 +152,7 @@ describe("popup settings form", () => {
       type: "START_AI_CAPTURE",
       tabId: 42,
       sourceLanguage: "en",
-      targetLanguage: "tr",
+      targetLanguage: DEFAULT_SETTINGS.targetLanguage,
       videoTimeMs: 1250.5
     });
   });

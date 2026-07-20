@@ -22,23 +22,11 @@
           <div class="grid two">
             <label>
               <span data-i18n="sourceLanguage"></span>
-              <select name="sourceLanguage">
-                <option value="en" data-i18n="languageEnglish"></option>
-                <option value="tr" data-i18n="languageTurkish"></option>
-                <option value="de" data-i18n="languageGerman"></option>
-                <option value="es" data-i18n="languageSpanish"></option>
-                <option value="fr" data-i18n="languageFrench"></option>
-              </select>
+              <select name="sourceLanguage"></select>
             </label>
             <label>
               <span data-i18n="targetLanguage"></span>
-              <select name="targetLanguage">
-                <option value="tr" data-i18n="languageTurkish"></option>
-                <option value="en" data-i18n="languageEnglish"></option>
-                <option value="de" data-i18n="languageGerman"></option>
-                <option value="es" data-i18n="languageSpanish"></option>
-                <option value="fr" data-i18n="languageFrench"></option>
-              </select>
+              <select name="targetLanguage"></select>
             </label>
           </div>
         </fieldset>
@@ -106,6 +94,8 @@
         <fieldset disabled>
           <legend data-i18n="preferences"></legend>
           <div class="grid two">
+            <label class="toggle-field"><input name="enabled" type="checkbox" /><span data-i18n="subtitlesEnabled"></span></label>
+            <label><span data-i18n="theme"></span><select name="theme"><option value="system" data-i18n="themeSystem"></option><option value="light" data-i18n="themeLight"></option><option value="dark" data-i18n="themeDark"></option></select></label>
             <label><span data-i18n="scope"></span><select name="scope"><option value="global" data-i18n="global"></option><option value="site" data-i18n="site"></option></select></label>
             <label><span data-i18n="uiLanguage"></span><select name="uiLocale"><option value="auto" data-i18n="auto"></option><option value="tr" data-i18n="turkish"></option><option value="en" data-i18n="english"></option></select></label>
           </div>

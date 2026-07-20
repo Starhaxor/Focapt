@@ -1,9 +1,10 @@
 import type { LanguageCode } from "@focapt/contracts/captions";
 import type { UserSettings } from "@focapt/contracts/settings";
+import { isYouTubeLanguageCode } from "./languages";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const LANGUAGE_CODES: readonly LanguageCode[] = ["en", "tr", "de", "es", "fr"];
 const POSITION_MODES: readonly UserSettings["positionMode"][] = ["fixed", "moving", "delayed"];
+const THEMES: readonly UserSettings["theme"][] = ["system", "light", "dark"];
 const SCOPES: readonly UserSettings["scope"][] = ["global", "site"];
 const UI_LOCALES: readonly UserSettings["uiLocale"][] = ["auto", "tr", "en"];
 const FONT_WEIGHTS: readonly UserSettings["sourceStyle"]["fontWeight"][] = [400, 500, 600, 700];
@@ -30,8 +31,10 @@ function hexColor(value: unknown, fallback: string): string {
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
+  enabled: true,
+  theme: "system",
   sourceLanguage: "en",
-  targetLanguage: "tr",
+  targetLanguage: "en",
   positionMode: "fixed",
   delayMs: 600,
   pointerOffsetPx: 18,
@@ -57,8 +60,14 @@ export function normalizeSettings(input: unknown): UserSettings {
   const box = isPlainObject(value.box) ? value.box : {};
 
   return {
-    sourceLanguage: allowedValue(value.sourceLanguage, LANGUAGE_CODES, DEFAULT_SETTINGS.sourceLanguage),
-    targetLanguage: allowedValue(value.targetLanguage, LANGUAGE_CODES, DEFAULT_SETTINGS.targetLanguage),
+    enabled: typeof value.enabled === "boolean" ? value.enabled : DEFAULT_SETTINGS.enabled,
+    theme: allowedValue(value.theme, THEMES, DEFAULT_SETTINGS.theme),
+    sourceLanguage: isYouTubeLanguageCode(value.sourceLanguage)
+      ? value.sourceLanguage as LanguageCode
+      : DEFAULT_SETTINGS.sourceLanguage,
+    targetLanguage: isYouTubeLanguageCode(value.targetLanguage)
+      ? value.targetLanguage as LanguageCode
+      : DEFAULT_SETTINGS.targetLanguage,
     positionMode: allowedValue(value.positionMode, POSITION_MODES, DEFAULT_SETTINGS.positionMode),
     delayMs: finiteNumber(value.delayMs, DEFAULT_SETTINGS.delayMs, 0, 3000),
     pointerOffsetPx: finiteNumber(value.pointerOffsetPx, DEFAULT_SETTINGS.pointerOffsetPx, 4, 80),

@@ -1,5 +1,12 @@
-import { installYouTubeTracksBridge } from "../src/youtube/bridge";
-import { extractCaptionTracks } from "../src/youtube/player-response";
+import {
+  handleYouTubeCaptionRequest,
+  installYouTubeTracksBridge,
+} from "../src/youtube/bridge";
+import {
+  createCaptionCatalog,
+  readCaptionCatalogRequest,
+} from "../src/youtube/page-caption-protocol";
+import { extractCaptionCatalog } from "../src/youtube/player-response";
 import { isYouTubeVideoId, readYouTubeVideoId } from "../src/youtube/youtube-url";
 
 type UnknownRecord = Record<string, unknown>;
@@ -25,6 +32,22 @@ const callSafely = (callback: (() => unknown) | undefined): unknown => {
   }
 };
 
+const currentVideoId = (): string => {
+  try {
+    const player = document.querySelector(
+      "#movie_player",
+    ) as YouTubePlayerElement | null;
+    const videoData = callSafely(player?.getVideoData?.bind(player));
+    const playerVideoId =
+      isRecord(videoData) && isYouTubeVideoId(videoData.video_id)
+        ? videoData.video_id
+        : "";
+    return playerVideoId || readYouTubeVideoId(location.href) || "";
+  } catch {
+    return "";
+  }
+};
+
 export default defineContentScript({
   matches: ["https://www.youtube.com/*"],
   world: "MAIN",
@@ -43,19 +66,11 @@ export default defineContentScript({
           playerResponse === undefined
             ? bridgeWindow.ytInitialPlayerResponse
             : playerResponse;
-
-        const videoData = callSafely(player?.getVideoData?.bind(player));
-        const playerVideoId =
-          isRecord(videoData) && isYouTubeVideoId(videoData.video_id)
-            ? videoData.video_id
-            : "";
-        const videoId =
-          playerVideoId || readYouTubeVideoId(location.href) || "";
-
-        window.dispatchEvent(
-          new CustomEvent("focapt:youtube-tracks", {
-            detail: { videoId, tracks: extractCaptionTracks(response) },
-          }),
+        const videoId = currentVideoId();
+        if (!videoId) return;
+        window.postMessage(
+          createCaptionCatalog(videoId, extractCaptionCatalog(response)),
+          location.origin,
         );
       } catch {
         // Publishing is best-effort and must not interfere with YouTube's page code.
@@ -68,7 +83,28 @@ export default defineContentScript({
       addNavigationListener: (listener) =>
         document.addEventListener("yt-navigate-finish", listener),
       addRequestListener: (listener) =>
-        window.addEventListener("focapt:request-youtube-tracks", listener),
+        window.addEventListener("message", (event) => {
+          try {
+            if (event.source === window && readCaptionCatalogRequest(event.data)) {
+              listener();
+            }
+          } catch {
+            // Invalid page messages are ignored.
+          }
+        }),
+      addCaptionRequestListener: (listener) =>
+        window.addEventListener("message", listener),
+      handleCaptionRequest: (event) => handleYouTubeCaptionRequest(
+        event as MessageEvent<unknown>,
+        {
+          host: window,
+          currentVideoId,
+          fetchCaption: (url, init) => fetch(url, init),
+          postMessage: (message, targetOrigin) =>
+            window.postMessage(message, targetOrigin),
+          targetOrigin: location.origin,
+        },
+      ),
     });
   },
 });

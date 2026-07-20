@@ -19,6 +19,7 @@ export class FocaptSubtitleOverlay {
   private readonly translation: HTMLElement;
   private hasContent = false;
   private positionVisible = true;
+  private settingsEnabled = true;
   private cancelLayoutNotification: (() => void) | undefined;
   private layoutRevision = 0;
   private destroyed = false;
@@ -161,6 +162,7 @@ export class FocaptSubtitleOverlay {
   }
 
   applySettings(value: UserSettings): void {
+    this.settingsEnabled = value.enabled;
     const style = this.host.style;
     style.setProperty("--source-color", value.sourceStyle.color);
     style.setProperty("--source-size", `${value.sourceStyle.fontSizePx}px`);
@@ -175,6 +177,7 @@ export class FocaptSubtitleOverlay {
     style.setProperty("--box-radius", `${value.box.radiusPx}px`);
     style.setProperty("--line-gap", `${value.box.lineGapPx}px`);
     this.host.dataset.mode = value.positionMode;
+    this.syncVisibility();
     this.scheduleLayoutNotification();
   }
 
@@ -219,10 +222,11 @@ export class FocaptSubtitleOverlay {
   }
 
   private syncVisibility(): void {
+    this.host.hidden = !this.settingsEnabled;
     this.box.hidden = !this.hasContent;
     this.box.style.visibility = this.positionVisible ? "visible" : "hidden";
     this.host.style.visibility = this.positionVisible ? "visible" : "hidden";
-    const ariaHidden = String(!this.hasContent || !this.positionVisible);
+    const ariaHidden = String(!this.settingsEnabled || !this.hasContent || !this.positionVisible);
     this.box.setAttribute("aria-hidden", ariaHidden);
     this.host.setAttribute("aria-hidden", ariaHidden);
   }

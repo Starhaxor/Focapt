@@ -1,7 +1,12 @@
-import type { LanguageCode } from "@focapt/contracts/captions";
+import type { LanguageCode, LanguageOption } from "@focapt/contracts/captions";
 import type { UserSettings } from "@focapt/contracts/settings";
+import { normalizeLanguageCatalog } from "@focapt/core/languages";
 import { normalizeSettings } from "@focapt/core/settings";
-import type { YouTubeCaptionTrack } from "./player-response";
+import {
+  selectBaseCaptionTrack,
+  type YouTubeCaptionCatalog,
+  type YouTubeCaptionTrack,
+} from "./player-response";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -68,20 +73,91 @@ export function readTracksEventDetail(
     isRecord(track) &&
     typeof track.baseUrl === "string" &&
     typeof track.languageCode === "string" &&
-    typeof track.label === "string"
+    typeof track.label === "string" &&
+    typeof track.isTranslatable === "boolean" &&
+    typeof track.isDefault === "boolean"
   )) return null;
   return value as unknown as YouTubeTracksEventDetail;
 }
-
-const baseLanguage = (language: string): string => language.toLowerCase().split(/[-_]/, 1)[0] ?? "";
 
 export function selectCaptionTrack(
   tracks: readonly YouTubeCaptionTrack[],
   language: LanguageCode
 ): YouTubeCaptionTrack | undefined {
-  const normalized = language.toLowerCase();
-  return tracks.find((track) => track.languageCode.toLowerCase() === normalized)
-    ?? tracks.find((track) => baseLanguage(track.languageCode) === normalized);
+  return selectBaseCaptionTrack(tracks, language);
+}
+
+export interface BilingualLoadPlan {
+  baseTrack: YouTubeCaptionTrack;
+  sourceRequestLanguage: string | null;
+  targetRequestLanguage: string | null;
+}
+
+function resolveCatalogLanguage(
+  selectedLanguage: string,
+  languages: readonly LanguageOption[]
+): string {
+  const catalog = normalizeLanguageCatalog(languages);
+  if (catalog.length === 0) return selectedLanguage;
+
+  const normalized = selectedLanguage.toLowerCase();
+  return catalog.find((language) => language.languageCode.toLowerCase() === normalized)?.languageCode
+    ?? catalog.find((language) => language.languageCode.toLowerCase() === "en")?.languageCode
+    ?? catalog[0]!.languageCode;
+}
+
+export function createBilingualLoadPlan(
+  catalog: YouTubeCaptionCatalog,
+  settings: Pick<UserSettings, "sourceLanguage" | "targetLanguage">
+): BilingualLoadPlan | null {
+  const sourceLanguage = resolveCatalogLanguage(
+    settings.sourceLanguage,
+    catalog.languages
+  );
+  const targetLanguage = resolveCatalogLanguage(
+    settings.targetLanguage,
+    catalog.languages
+  );
+  let baseTrack = selectBaseCaptionTrack(catalog.tracks, sourceLanguage);
+  if (!baseTrack) return null;
+
+  const needsTranslation =
+    baseTrack.languageCode.toLowerCase() !== sourceLanguage.toLowerCase()
+    || baseTrack.languageCode.toLowerCase() !== targetLanguage.toLowerCase();
+  if (needsTranslation && !baseTrack.isTranslatable) {
+    baseTrack = selectBaseCaptionTrack(
+      catalog.tracks.filter((track) => track.isTranslatable),
+      sourceLanguage
+    ) ?? baseTrack;
+  }
+
+  const requestLanguage = (language: string): string | null =>
+    baseTrack.languageCode.toLowerCase() === language.toLowerCase() ? null : language;
+
+  return {
+    baseTrack,
+    sourceRequestLanguage: requestLanguage(sourceLanguage),
+    targetRequestLanguage: requestLanguage(targetLanguage)
+  };
+}
+
+export class LanguageDefaultsInitializer {
+  private initialization: Promise<void> | undefined;
+
+  run(
+    languages: readonly LanguageOption[],
+    initialize: () => void | Promise<void>
+  ): Promise<void> {
+    if (normalizeLanguageCatalog(languages).length === 0) return Promise.resolve();
+    if (!this.initialization) {
+      const running = Promise.resolve().then(initialize);
+      this.initialization = running.catch((error) => {
+        this.initialization = undefined;
+        throw error;
+      });
+    }
+    return this.initialization;
+  }
 }
 
 export function readSettingsUpdate(message: unknown): UserSettings | null {
@@ -99,6 +175,11 @@ interface ContentMessageTarget {
 export class ContentMessageBridge {
   private target: ContentMessageTarget | undefined;
   private latestSettings: UserSettings | undefined;
+  private latestLanguages: LanguageOption[] = [];
+
+  setLanguageCatalog(languages: readonly LanguageOption[]): void {
+    this.latestLanguages = languages.map((option) => ({ ...option }));
+  }
 
   handle(message: unknown): Promise<unknown> | undefined {
     const nextSettings = readSettingsUpdate(message);
@@ -109,6 +190,11 @@ export class ContentMessageBridge {
     }
     if (isRecord(message) && message.type === "GET_VIDEO_TIME") {
       return Promise.resolve({ videoTimeMs: this.target?.getVideoTimeMs() ?? null });
+    }
+    if (isRecord(message) && message.type === "GET_LANGUAGE_CATALOG") {
+      return Promise.resolve({
+        languages: this.latestLanguages.map((option) => ({ ...option }))
+      });
     }
     return undefined;
   }
@@ -182,4 +268,22 @@ export class LatestRequestController {
   dispose(): void {
     this.cancel();
   }
+}
+
+interface CaptionLoadFailureContext {
+  requestVideoId: string;
+  currentVideoId: () => string;
+  generationSignal: AbortSignal;
+  isGenerationCurrent: () => boolean;
+}
+
+export function reportCaptionLoadFailure(
+  context: CaptionLoadFailureContext,
+  report: () => void
+): void {
+  if (
+    !context.generationSignal.aborted
+    && context.isGenerationCurrent()
+    && context.requestVideoId === context.currentVideoId()
+  ) report();
 }

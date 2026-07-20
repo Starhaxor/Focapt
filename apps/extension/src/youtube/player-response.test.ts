@@ -1,8 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { extractCaptionTracks } from "./player-response";
+import {
+  extractCaptionCatalog,
+  extractCaptionTracks,
+  selectBaseCaptionTrack,
+} from "./player-response";
 
 describe("extractCaptionTracks", () => {
+  it("extracts the complete translation catalog and default-track fallback", () => {
+    const response = { captions: { playerCaptionsTracklistRenderer: {
+      captionTracks: [
+        { baseUrl: "https://www.youtube.com/api/timedtext?v=1", languageCode: "en", name: { simpleText: "English" }, isTranslatable: true },
+        { baseUrl: "https://www.youtube.com/api/timedtext?v=2", languageCode: "de", name: { simpleText: "Deutsch" } }
+      ],
+      translationLanguages: [
+        { languageCode: "tr", languageName: { simpleText: "TÃ¼rkÃ§e" } },
+        { languageCode: "zh-Hans", languageName: { simpleText: "ä¸­æ–‡ï¼ˆç®€ä½“ï¼‰" } }
+      ],
+      defaultAudioTrackIndex: 0
+    }}};
+
+    expect(extractCaptionCatalog(response)).toMatchObject({
+      tracks: [
+        { languageCode: "en", isTranslatable: true, isDefault: true },
+        { languageCode: "de", isTranslatable: false, isDefault: false },
+      ],
+      languages: [
+        { languageCode: "tr", label: "TÃ¼rkÃ§e" },
+        { languageCode: "zh-Hans", label: "ä¸­æ–‡ï¼ˆç®€ä½“ï¼‰" }
+      ]
+    });
+    expect(selectBaseCaptionTrack(extractCaptionCatalog(response).tracks, "fr")?.languageCode).toBe("en");
+  });
+
   it("player response içinden geçerli caption track alanlarını çıkarır", () => {
     const response = {
       captions: {
@@ -25,6 +55,8 @@ describe("extractCaptionTracks", () => {
         baseUrl: "https://www.youtube.com/api/timedtext?v=1",
         languageCode: "en",
         label: "English",
+        isTranslatable: false,
+        isDefault: false,
       },
     ]);
   });
@@ -47,11 +79,15 @@ describe("extractCaptionTracks", () => {
         baseUrl: "http://youtube.com/captions",
         languageCode: "en",
         label: "en",
+        isTranslatable: false,
+        isDefault: false,
       },
       {
         baseUrl: "https://youtube.com/captions",
         languageCode: "tr",
         label: "tr",
+        isTranslatable: false,
+        isDefault: false,
       },
     ]);
   });
@@ -84,16 +120,22 @@ describe("extractCaptionTracks", () => {
         baseUrl: "https://youtube.com/captions?lang=en",
         languageCode: "en",
         label: "English",
+        isTranslatable: false,
+        isDefault: false,
       },
       {
         baseUrl: "https://youtube.com/captions?lang=tr",
         languageCode: "tr",
+        isTranslatable: false,
+        isDefault: false,
         label: "Türkçe (auto)",
       },
       {
         baseUrl: "https://youtube.com/captions?lang=de",
         languageCode: "de",
         label: "de",
+        isTranslatable: false,
+        isDefault: false,
       },
     ]);
   });

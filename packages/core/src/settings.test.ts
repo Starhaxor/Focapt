@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings";
 
 describe("normalizeSettings", () => {
+  it("enabled, theme, and extended YouTube language codes are normalized", () => {
+    expect(normalizeSettings({ enabled: false, theme: "dark", sourceLanguage: "zh-Hans" }))
+      .toMatchObject({ enabled: false, theme: "dark", sourceLanguage: "zh-Hans" });
+    expect(normalizeSettings({ theme: "neon", targetLanguage: "javascript:" }))
+      .toMatchObject({ theme: "system", targetLanguage: "en" });
+  });
+
   it("gecikmeyi ve görünüm değerlerini güvenli aralığa sıkıştırır", () => {
     const result = normalizeSettings({
       delayMs: -5,
@@ -54,7 +61,7 @@ describe("normalizeSettings", () => {
 
   it("yalnız desteklenen dil kodlarını kabul eder", () => {
     expect(normalizeSettings({ sourceLanguage: "en-US", targetLanguage: "javascript:" })).toMatchObject({
-      sourceLanguage: DEFAULT_SETTINGS.sourceLanguage,
+      sourceLanguage: "en-US",
       targetLanguage: DEFAULT_SETTINGS.targetLanguage
     });
     expect(normalizeSettings({ sourceLanguage: "de", targetLanguage: "fr" })).toMatchObject({

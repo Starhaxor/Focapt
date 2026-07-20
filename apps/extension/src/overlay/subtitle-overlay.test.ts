@@ -43,6 +43,20 @@ describe("FocaptSubtitleOverlay", () => {
     vi.unstubAllGlobals();
   });
 
+  it("enabled ayarı kapalıyken cue'yu gizler ve yeniden açınca gösterir", () => {
+    const overlay = new FocaptSubtitleOverlay();
+    const cue = { id: "1", startMs: 0, endMs: 1000, text: "Hello", translatedText: "Merhaba" };
+
+    overlay.applySettings({ ...DEFAULT_SETTINGS, enabled: false });
+    overlay.setCue(cue);
+    expect(overlay.host.hidden).toBe(true);
+    expect(overlay.getAttribute("aria-hidden")).toBe("true");
+
+    overlay.applySettings({ ...DEFAULT_SETTINGS, enabled: true });
+    expect(overlay.host.hidden).toBe(false);
+    expect(overlay.getAttribute("aria-hidden")).toBe("false");
+  });
+
   it("Chrome isolated world customElements null olsa da normal DOM hostu olusturur", async () => {
     vi.resetModules();
     vi.stubGlobal("customElements", null);

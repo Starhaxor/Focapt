@@ -1,6 +1,7 @@
 import type { LanguageCode } from "./captions";
 
 export type PositionMode = "fixed" | "moving" | "delayed";
+export type ThemePreference = "system" | "light" | "dark";
 
 export interface TextStyle {
   color: string;
@@ -9,6 +10,8 @@ export interface TextStyle {
 }
 
 export interface UserSettings {
+  enabled: boolean;
+  theme: ThemePreference;
   sourceLanguage: LanguageCode;
   targetLanguage: LanguageCode;
   positionMode: PositionMode;
