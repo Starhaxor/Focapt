@@ -9,6 +9,7 @@ import {
   ensurePositionedContainer,
   LanguageDefaultsInitializer,
   LatestRequestController,
+  loadBilingualCaptionCues,
   reportCaptionLoadFailure,
   readSettingsUpdate,
   readTracksEventDetail,
@@ -19,6 +20,38 @@ import {
 afterEach(() => vi.useRealTimers());
 
 describe("YouTube content runtime helpers", () => {
+  it("ikinci dil istegini kaynak altyazi tamamlandiktan sonra baslatir", async () => {
+    let releaseSource: ((value: Array<{ id: string; startMs: number; endMs: number; text: string }>) => void) | undefined;
+    const sourcePending = new Promise<Array<{ id: string; startMs: number; endMs: number; text: string }>>(
+      (resolve) => { releaseSource = resolve; },
+    );
+    const calls: Array<string | null> = [];
+    const plan = {
+      baseTrack: {
+        baseUrl: "https://www.youtube.com/api/timedtext?v=1&lang=en",
+        languageCode: "en",
+        label: "English",
+        isTranslatable: true,
+        isDefault: true,
+      },
+      sourceRequestLanguage: "fr",
+      targetRequestLanguage: "tr",
+    };
+
+    const pending = loadBilingualCaptionCues(plan, async (language) => {
+      calls.push(language);
+      if (language === "fr") return sourcePending;
+      return [{ id: "tr-1", startMs: 0, endMs: 1000, text: "Merhaba" }];
+    });
+
+    expect(calls).toEqual(["fr"]);
+    releaseSource?.([{ id: "fr-1", startMs: 0, endMs: 1000, text: "Bonjour" }]);
+    await expect(pending).resolves.toEqual([
+      { id: "fr-1", startMs: 0, endMs: 1000, text: "Bonjour", translatedText: "Merhaba" },
+    ]);
+    expect(calls).toEqual(["fr", "tr"]);
+  });
+
   it("falls back to a real base track and requests the selected source translation", () => {
     const catalog = {
       tracks: [

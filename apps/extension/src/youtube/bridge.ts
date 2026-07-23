@@ -39,6 +39,7 @@ interface CaptionRequestEvent {
 
 interface CaptionFetchResponse {
   ok: boolean;
+  status?: number;
   text(): Promise<string>;
 }
 
@@ -49,6 +50,7 @@ interface YouTubeCaptionRequestDependencies {
     url: URL,
     init: { credentials: "include" },
   ) => Promise<CaptionFetchResponse>;
+  waitBeforeRetry?: (delayMs: number) => Promise<void>;
   postMessage: (message: CaptionPageResponse, targetOrigin: string) => void;
   targetOrigin: string;
 }
@@ -206,7 +208,14 @@ export async function handleYouTubeCaptionRequest(
 
   try {
     const url = createJson3Url(request.track.baseUrl, request.language);
-    const response = await dependencies.fetchCaption(url, { credentials: "include" });
+    let response = await dependencies.fetchCaption(url, { credentials: "include" });
+    if (!response.ok && response.status === 429) {
+      const waitBeforeRetry = dependencies.waitBeforeRetry
+        ?? ((delayMs: number) => new Promise<void>((resolve) => globalThis.setTimeout(resolve, delayMs)));
+      await waitBeforeRetry(750);
+      if (request.videoId !== dependencies.currentVideoId()) return;
+      response = await dependencies.fetchCaption(url, { credentials: "include" });
+    }
     if (!response.ok) throw new Error("CAPTION_LOAD_FAILED");
     const text = await response.text();
     const cues = text ? parseJson3(JSON.parse(text)) : [];

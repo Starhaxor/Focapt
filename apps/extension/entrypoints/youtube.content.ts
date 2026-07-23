@@ -9,7 +9,6 @@ import { PositionController } from "../src/overlay/position-controller";
 import { FocaptSubtitleOverlay } from "../src/overlay/subtitle-overlay";
 import { SubtitleOrchestrator } from "../src/runtime/orchestrator";
 import { SettingsStore } from "../src/runtime/settings-store";
-import { mergeBilingualCues } from "../src/youtube/bilingual-cues";
 import {
   AsyncGeneration,
   ContentMessageBridge,
@@ -17,6 +16,7 @@ import {
   ensurePositionedContainer,
   LanguageDefaultsInitializer,
   LatestRequestController,
+  loadBilingualCaptionCues,
   reportCaptionLoadFailure,
   waitForYouTubeVideo
 } from "../src/youtube/content-runtime";
@@ -220,21 +220,14 @@ export default defineContentScript({
           try {
             await captionRequests.run(
               async (loadSignal, loadIsCurrent) => {
-                const sourcePromise = pageCaptions.load(
-                  plan.baseTrack,
-                  plan.sourceRequestLanguage,
-                  loadSignal
+                const translated = await loadBilingualCaptionCues(
+                  plan,
+                  (language) => pageCaptions.load(plan.baseTrack, language, loadSignal),
                 );
-                const translatedPromise = pageCaptions.load(
-                  plan.baseTrack,
-                  plan.targetRequestLanguage,
-                  loadSignal
-                );
-                const [source, translated] = await Promise.all([sourcePromise, translatedPromise]);
                 if (!loadIsCurrent() || !generation.isCurrent() || requestVideoId !== currentVideoId()) {
                   return null;
                 }
-                return mergeBilingualCues(source, translated);
+                return translated;
               },
               (translated) => {
                 if (

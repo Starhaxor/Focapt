@@ -283,6 +283,42 @@ describe("YouTube timedtext proof URL", () => {
   });
 });
 describe("handleYouTubeCaptionRequest", () => {
+  it("YouTube 429 verdiginde kisa bekleyip istegi bir kez yineler", async () => {
+    const host = {};
+    const request = createCaptionRequest("req-retry", "HAG4uyrkVfA", captionTrack, "de");
+    const fetchCaption = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, text: async () => "" })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          events: [{ tStartMs: 0, dDurationMs: 1000, segs: [{ utf8: "Hallo" }] }],
+        }),
+      });
+    const waitBeforeRetry = vi.fn(async () => undefined);
+    const postMessage = vi.fn();
+
+    await handleYouTubeCaptionRequest(
+      { source: host, data: request },
+      {
+        host,
+        currentVideoId: () => "HAG4uyrkVfA",
+        fetchCaption,
+        waitBeforeRetry,
+        postMessage,
+        targetOrigin: "https://www.youtube.com",
+      },
+    );
+
+    expect(fetchCaption).toHaveBeenCalledTimes(2);
+    expect(waitBeforeRetry).toHaveBeenCalledWith(750);
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      requestId: "req-retry",
+      ok: true,
+      cues: [{ id: "yt-0-1000", startMs: 0, endMs: 1000, text: "Hallo" }],
+    }), "https://www.youtube.com");
+  });
+
   it("valid same-window request'i credentialed JSON3 fetch ile cevaplar", async () => {
     const host = {};
     const request = createCaptionRequest("req-1", "HAG4uyrkVfA", captionTrack, "tr");

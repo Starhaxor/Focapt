@@ -1,7 +1,8 @@
-import type { LanguageCode, LanguageOption } from "@focapt/contracts/captions";
+import type { BilingualCue, CaptionCue, LanguageCode, LanguageOption } from "@focapt/contracts/captions";
 import type { UserSettings } from "@focapt/contracts/settings";
 import { normalizeLanguageCatalog } from "@focapt/core/languages";
 import { normalizeSettings } from "@focapt/core/settings";
+import { mergeBilingualCues } from "./bilingual-cues";
 import {
   selectBaseCaptionTrack,
   type YouTubeCaptionCatalog,
@@ -91,6 +92,17 @@ export interface BilingualLoadPlan {
   baseTrack: YouTubeCaptionTrack;
   sourceRequestLanguage: string | null;
   targetRequestLanguage: string | null;
+}
+
+export async function loadBilingualCaptionCues(
+  plan: BilingualLoadPlan,
+  load: (language: string | null) => Promise<CaptionCue[]>,
+): Promise<BilingualCue[]> {
+  const source = await load(plan.sourceRequestLanguage);
+  const translated = plan.targetRequestLanguage === plan.sourceRequestLanguage
+    ? source
+    : await load(plan.targetRequestLanguage);
+  return mergeBilingualCues(source, translated);
 }
 
 function resolveCatalogLanguage(
