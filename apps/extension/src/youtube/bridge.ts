@@ -1,5 +1,11 @@
 import { parseJson3 } from "./json3";
 import {
+  extractCaptionCatalog,
+  extractInitialPlayerResponse,
+  readPlayerResponseForVideo,
+  type YouTubeCaptionCatalog,
+} from "./player-response";
+import {
   createCaptionFailure,
   createCaptionSuccess,
   createJson3Url,
@@ -47,6 +53,136 @@ interface YouTubeCaptionRequestDependencies {
   targetOrigin: string;
 }
 
+type TimedTextUrlListener = (videoId: string, url: string) => void;
+
+const readProofTimedTextUrl = (
+  value: string,
+  expectedVideoId?: string,
+): { videoId: string; language: string; url: string } | null => {
+  try {
+    const url = new URL(value);
+    const videoId = url.searchParams.get("v") ?? "";
+    const language = url.searchParams.get("lang") ?? "";
+    if (
+      url.protocol !== "https:"
+      || !url.hostname.toLowerCase().endsWith(".youtube.com")
+      || url.pathname !== "/api/timedtext"
+      || !videoId
+      || (expectedVideoId !== undefined && videoId !== expectedVideoId)
+      || !language
+      || !url.searchParams.get("pot")
+      || !url.searchParams.get("potc")
+    ) return null;
+    url.searchParams.delete("tlang");
+    return { videoId, language, url: url.href };
+  } catch {
+    return null;
+  }
+};
+
+export class YouTubeTimedTextUrlRegistry {
+  private readonly urls = new Map<string, string>();
+  private readonly listeners = new Set<TimedTextUrlListener>();
+
+  capture(value: string): boolean {
+    const proof = readProofTimedTextUrl(value);
+    if (!proof || this.urls.get(proof.videoId) === proof.url) return false;
+    this.urls.set(proof.videoId, proof.url);
+    for (const listener of [...this.listeners]) listener(proof.videoId, proof.url);
+    return true;
+  }
+
+  get(videoId: string): string | null {
+    return this.urls.get(videoId) ?? null;
+  }
+
+  subscribe(listener: TimedTextUrlListener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  wait(videoId: string, timeoutMs: number): Promise<string | null> {
+    const current = this.get(videoId);
+    if (current) return Promise.resolve(current);
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (value: string | null): void => {
+        if (settled) return;
+        settled = true;
+        globalThis.clearTimeout(timer);
+        unsubscribe();
+        resolve(value);
+      };
+      const unsubscribe = this.subscribe((capturedVideoId, url) => {
+        if (capturedVideoId === videoId) finish(url);
+      });
+      const timer = globalThis.setTimeout(() => finish(null), timeoutMs);
+    });
+  }
+}
+
+export function enrichYouTubeCaptionCatalogWithTimedText(
+  catalog: YouTubeCaptionCatalog,
+  proofUrl: string,
+  videoId: string,
+): YouTubeCaptionCatalog {
+  const proof = readProofTimedTextUrl(proofUrl, videoId);
+  if (!proof) return catalog;
+  let applied = false;
+  const tracks = catalog.tracks.map((track) => {
+    if (track.languageCode.toLowerCase() !== proof.language.toLowerCase()) return track;
+    applied = true;
+    return { ...track, baseUrl: proof.url };
+  });
+  return applied ? { tracks, languages: catalog.languages } : catalog;
+}
+interface WatchPageFetchResponse {
+  ok: boolean;
+  text(): Promise<string>;
+}
+
+interface YouTubeCaptionCatalogDependencies {
+  videoId: string;
+  watchUrl: string;
+  inlineSources: readonly string[];
+  playerResponses?: readonly unknown[];
+  fetchWatchPage: (
+    url: string,
+    init: { credentials: "include"; cache: "no-store" },
+  ) => Promise<WatchPageFetchResponse>;
+}
+
+const emptyCaptionCatalog = (): YouTubeCaptionCatalog => ({ tracks: [], languages: [] });
+
+export async function loadYouTubeCaptionCatalog({
+  videoId,
+  watchUrl,
+  inlineSources,
+  playerResponses = [],
+  fetchWatchPage,
+}: YouTubeCaptionCatalogDependencies): Promise<YouTubeCaptionCatalog> {
+  for (const response of playerResponses) {
+    const current = readPlayerResponseForVideo(response, videoId);
+    if (current) return extractCaptionCatalog(current);
+  }
+
+  for (const source of inlineSources) {
+    const response = extractInitialPlayerResponse(source, videoId);
+    if (response) return extractCaptionCatalog(response);
+  }
+
+  try {
+    const response = await fetchWatchPage(watchUrl, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) return emptyCaptionCatalog();
+    const playerResponse = extractInitialPlayerResponse(await response.text(), videoId);
+    return playerResponse ? extractCaptionCatalog(playerResponse) : emptyCaptionCatalog();
+  } catch {
+    return emptyCaptionCatalog();
+  }
+}
 export async function handleYouTubeCaptionRequest(
   event: CaptionRequestEvent,
   dependencies: YouTubeCaptionRequestDependencies,

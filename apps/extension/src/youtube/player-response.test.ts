@@ -2,9 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractCaptionCatalog,
+  extractInitialPlayerResponse,
   extractCaptionTracks,
   selectBaseCaptionTrack,
 } from "./player-response";
+describe("extractInitialPlayerResponse", () => {
+  it("YouTube'un globalden kaldirdigi inline player response'u beklenen video icin okur", () => {
+    const response = {
+      videoDetails: { videoId: "HAG4uyrkVfA", title: "Brace } and quote \" stay valid" },
+      captions: { playerCaptionsTracklistRenderer: { captionTracks: [] } },
+    };
+    const html = `<script>var ytInitialPlayerResponse = ${JSON.stringify(response)};</script>`;
+
+    expect(extractInitialPlayerResponse(html, "HAG4uyrkVfA")).toEqual(response);
+    expect(extractInitialPlayerResponse(html, "dJOX0wjjAPQ")).toBeNull();
+  });
+});
 
 describe("extractCaptionTracks", () => {
   it("extracts the complete translation catalog and default-track fallback", () => {

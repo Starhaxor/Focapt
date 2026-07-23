@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleYouTubeCaptionRequest,
   installYouTubeTracksBridge,
+  loadYouTubeCaptionCatalog,
+  enrichYouTubeCaptionCatalogWithTimedText,
+  YouTubeTimedTextUrlRegistry,
 } from "./bridge";
 import {
   CAPTION_RESPONSE_CHANNEL,
@@ -217,6 +220,68 @@ describe("installYouTubeTracksBridge", () => {
   });
 });
 
+describe("loadYouTubeCaptionCatalog", () => {
+  it("SPA gecisinde eski inline veriyi reddedip mevcut watch sayfasini credentialed fetch ile okur", async () => {
+    const stale = {
+      videoDetails: { videoId: "HAG4uyrkVfA" },
+      captions: { playerCaptionsTracklistRenderer: { captionTracks: [] } },
+    };
+    const current = {
+      videoDetails: { videoId: "dJOX0wjjAPQ" },
+      captions: { playerCaptionsTracklistRenderer: {
+        captionTracks: [{
+          baseUrl: "https://www.youtube.com/api/timedtext?v=dJOX0wjjAPQ&lang=en",
+          languageCode: "en",
+          name: { simpleText: "English" },
+          isTranslatable: true,
+        }],
+        translationLanguages: [{ languageCode: "tr", languageName: { simpleText: "Turkce" } }],
+      } },
+    };
+    const fetchWatchPage = vi.fn(async () => ({
+      ok: true,
+      text: async () => `<script>var ytInitialPlayerResponse = ${JSON.stringify(current)};</script>`,
+    }));
+
+    await expect(loadYouTubeCaptionCatalog({
+      videoId: "dJOX0wjjAPQ",
+      watchUrl: "https://www.youtube.com/watch?v=dJOX0wjjAPQ",
+      inlineSources: [`var ytInitialPlayerResponse = ${JSON.stringify(stale)};`],
+      fetchWatchPage,
+    })).resolves.toMatchObject({
+      tracks: [{ languageCode: "en" }],
+      languages: [{ languageCode: "tr" }],
+    });
+    expect(fetchWatchPage).toHaveBeenCalledWith(
+      "https://www.youtube.com/watch?v=dJOX0wjjAPQ",
+      { credentials: "include", cache: "no-store" },
+    );
+  });
+});
+describe("YouTube timedtext proof URL", () => {
+  it("yalniz ayni videonun pot/potc iceren YouTube timedtext URL'sini kabul eder", () => {
+    const registry = new YouTubeTimedTextUrlRegistry();
+    expect(registry.capture("https://www.youtube.com/api/timedtext?v=dJOX0wjjAPQ&lang=en")).toBe(false);
+    expect(registry.capture("https://evil.example/api/timedtext?v=dJOX0wjjAPQ&pot=x&potc=1")).toBe(false);
+    const proofUrl = "https://www.youtube.com/api/timedtext?v=dJOX0wjjAPQ&lang=en&pot=proof-token&potc=1&fmt=json3";
+    expect(registry.capture(proofUrl)).toBe(true);
+    expect(registry.get("dJOX0wjjAPQ")).toBe(proofUrl);
+  });
+
+  it("proof URL'yi ayni dildeki katalog izine uygular", () => {
+    const proofUrl = "https://www.youtube.com/api/timedtext?v=dJOX0wjjAPQ&lang=en&pot=proof-token&potc=1&fmt=json3";
+    const catalog = {
+      tracks: [captionTrack, { ...captionTrack, languageCode: "de", baseUrl: "https://www.youtube.com/api/timedtext?v=dJOX0wjjAPQ&lang=de" }],
+      languages: [{ languageCode: "tr", label: "Turkce" }],
+    };
+
+    expect(enrichYouTubeCaptionCatalogWithTimedText(catalog, proofUrl, "dJOX0wjjAPQ").tracks)
+      .toEqual([
+        { ...captionTrack, baseUrl: proofUrl },
+        catalog.tracks[1],
+      ]);
+  });
+});
 describe("handleYouTubeCaptionRequest", () => {
   it("valid same-window request'i credentialed JSON3 fetch ile cevaplar", async () => {
     const host = {};

@@ -62,6 +62,65 @@ const readLabel = (name: unknown, languageCode: string): string => {
   return languageCode;
 };
 
+const PLAYER_RESPONSE_MARKER = "ytInitialPlayerResponse";
+
+const playerResponseMatchesVideo = (response: unknown, expectedVideoId: string): boolean => {
+  const videoDetails = readRecord(response, "videoDetails");
+  return videoDetails?.videoId === expectedVideoId;
+};
+
+export function extractInitialPlayerResponse(
+  source: string,
+  expectedVideoId: string,
+): unknown | null {
+  let markerIndex = source.indexOf(PLAYER_RESPONSE_MARKER);
+
+  while (markerIndex >= 0) {
+    const assignmentIndex = source.indexOf("=", markerIndex + PLAYER_RESPONSE_MARKER.length);
+    const objectStart = assignmentIndex >= 0 ? source.indexOf("{", assignmentIndex + 1) : -1;
+    if (assignmentIndex < 0 || objectStart < 0 || objectStart - assignmentIndex > 64) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = objectStart; index < source.length; index += 1) {
+      const character = source[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+      if (character === '"') {
+        inString = true;
+      } else if (character === "{") {
+        depth += 1;
+      } else if (character === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          try {
+            const response: unknown = JSON.parse(source.slice(objectStart, index + 1));
+            if (playerResponseMatchesVideo(response, expectedVideoId)) return response;
+          } catch {
+            // Continue with the next marker when page data is malformed.
+          }
+          break;
+        }
+      }
+    }
+
+    markerIndex = source.indexOf(PLAYER_RESPONSE_MARKER, markerIndex + PLAYER_RESPONSE_MARKER.length);
+  }
+
+  return null;
+}
+
+export function readPlayerResponseForVideo(
+  response: unknown,
+  expectedVideoId: string,
+): unknown | null {
+  return playerResponseMatchesVideo(response, expectedVideoId) ? response : null;
+}
 export function extractCaptionCatalog(response: unknown): YouTubeCaptionCatalog {
   const captions = readRecord(response, "captions");
   const tracklist = readRecord(captions, "playerCaptionsTracklistRenderer");
